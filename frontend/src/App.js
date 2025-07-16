@@ -14,7 +14,7 @@ function App() {
           <a href="#" >All Sweet</a>
         </div>
         <div className="content">
-          <AddSweet />
+          <AddSweet id="addSweet" />
         </div>
       </div>
     </div>
@@ -36,11 +36,12 @@ function AddSweet() {
         </select>
         <label for="sweetName">Sweet Name:</label>
         <input type="text" id="sweetName" name="sweetName" required />
+        <label for="price">Price:</label>
+        <input type="number" id="price" name="price" min="1" required />
         <label for="quantity">Quantity:</label>
         <input type="number" id="quantity" name="quantity" min="1" required />
         <button type="submit">Add Sweet</button>
       </form>
-
     </div>
   );
 }
