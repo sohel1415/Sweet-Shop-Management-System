@@ -32,3 +32,52 @@
   background-color: #ddd;
   color: black;
 }
+
+.purchase-form {
+  width: 300px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.purchase-form input[type="text"],
+.purchase-form input[type="number"] {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+.purchase-form button {
+  background-color: #f8b400;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.purchase-form button:hover {
+  background-color: #e09e00;
+}
+
+#sweetType {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+#sweetType option {
+  padding: 10px;
+}
+
+.purchase-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+.purchase-form h3 {
+  text-align: center;
+  margin-bottom: 20px;
+}
