@@ -7,11 +7,38 @@ function App() {
   const [sortOrder, setSortOrder] = useState('id-asc');
   const [page, setPage] = useState('home');
   const [cart, setCart] = useState([]);
+  const [sweets, setSweets] = useState([]);
+
+  // Fetch sweets data when component mounts
+  useEffect(() => {
+    const fetchSweets = async () => {
+      try {
+        const response = await fetch("http://localhost:3000/api/sweets");
+        if (!response.ok) throw new Error('Failed to fetch sweets');
+        const data = await response.json();
+        setSweets(data.data);
+      } catch (err) {
+        console.error('Error fetching sweets:', err);
+      }
+    };
+    fetchSweets();
+  }, []);
 
   const addToCart = (item) => {
     setCart((prevCart) => {
-      const existing = prevCart.find((i) => i.productId === item.productId);
-      if (existing) {
+      // Check available quantity
+      const availableQuantity = item.quantity;
+      const cartItem = prevCart.find((i) => i.productId === item.productId);
+      const currentInCart = cartItem ? cartItem.quantity : 0;
+      
+      // If trying to add more than available
+      if (currentInCart >= availableQuantity) {
+        alert(`Cannot add more. Only ${availableQuantity} available.`);
+        return prevCart;
+      }
+
+      // Update cart
+      if (cartItem) {
         return prevCart.map((i) =>
           i.productId === item.productId ? { ...i, quantity: i.quantity + 1 } : i
         );
@@ -33,6 +60,17 @@ function App() {
         )
         .filter((item) => item.quantity > 0)
     );
+  };
+
+  // Calculate available quantity for each sweet
+  const getAvailableQuantity = (productId) => {
+    const sweet = sweets.find(s => s.productId === productId);
+    if (!sweet) return 0;
+    
+    const cartItem = cart.find(i => i.productId === productId);
+    const inCart = cartItem ? cartItem.quantity : 0;
+    
+    return sweet.quantity - inCart;
   };
 
   return (
@@ -63,6 +101,9 @@ function App() {
                   typeFilter={typeFilter}
                   sortOrder={sortOrder}
                   addToCart={addToCart}
+                  sweets={sweets}
+                  cart={cart}
+                  getAvailableQuantity={getAvailableQuantity}
                 />
               </div>
               <div className="cart-section">
@@ -70,17 +111,89 @@ function App() {
                   cart={cart}
                   removeFromCart={removeFromCart}
                   decreaseQuantity={decreaseQuantity}
+                  setCart={setCart}
                 />
               </div>
             </div>
           )}
-          {page === 'add' && <AddSweet />}
-          {page === 'manage' && <SweetManager />}
+          {page === 'add' && <AddSweet setSweets={setSweets} />}
+          {page === 'manage' && <SweetManager setSweets={setSweets} />}
         </div>
       </div>
     </div>
   );
 }
+
+function FetchApi({ search, typeFilter, sortOrder, addToCart, sweets, cart, getAvailableQuantity }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const filteredData = sweets
+    .filter((item) => 
+      item.name.toLowerCase().includes(search.toLowerCase())
+    )
+    .filter((item) =>
+      typeFilter ? item.type.toLowerCase() === typeFilter.toLowerCase() : true
+    )
+    .sort((a, b) => {
+      switch (sortOrder) {
+        case 'id-asc': return a.productId - b.productId;
+        case 'id-desc': return b.productId - a.productId;
+        case 'name-asc': return a.name.localeCompare(b.name);
+        case 'name-desc': return b.name.localeCompare(a.name);
+        case 'price-asc': return a.price - b.price;
+        case 'price-desc': return b.price - a.price;
+        default: return 0;
+      }
+    });
+
+  if (loading && sweets.length === 0) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return (
+    <div className="sweet-list">
+      {filteredData.length === 0 ? (
+        <p>No sweets found matching your criteria.</p>
+      ) : (
+        <table className="sweet-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Price</th>
+              <th>Available</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredData.map((item) => {
+              const available = getAvailableQuantity(item.productId);
+              return (
+                <tr key={item.productId}>
+                  <td>{item.productId}</td>
+                  <td>{item.name}</td>
+                  <td>{item.type}</td>
+                  <td>₹{item.price}</td>
+                  <td>{available}</td>
+                  <td>
+                    <button 
+                      onClick={() => addToCart(item)}
+                      disabled={available <= 0}
+                    >
+                      {available <= 0 ? 'Out of Stock' : 'Add to Cart'}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
 
 function Buy({ search, setSearch, typeFilter, setTypeFilter, sortOrder, setSortOrder }) {
   return (
@@ -119,92 +232,39 @@ function Buy({ search, setSearch, typeFilter, setTypeFilter, sortOrder, setSortO
   );
 }
 
-function FetchApi({ search, typeFilter, sortOrder, addToCart }) {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+function CartBox({ cart, removeFromCart, decreaseQuantity, setCart }) {
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [checkoutMessage, setCheckoutMessage] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch("http://localhost:3000/api/sweets");
-        if (!response.ok) throw new Error('Failed to fetch');
-        const json = await response.json();
-        setData(json.data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const filteredData = data
-    .filter((item) => 
-      item.name.toLowerCase().includes(search.toLowerCase())
-    )
-    .filter((item) =>
-      typeFilter ? item.type.toLowerCase() === typeFilter.toLowerCase() : true
-    )
-    .sort((a, b) => {
-      switch (sortOrder) {
-        case 'id-asc': return a.productId - b.productId;
-        case 'id-desc': return b.productId - a.productId;
-        case 'name-asc': return a.name.localeCompare(b.name);
-        case 'name-desc': return b.name.localeCompare(a.name);
-        case 'price-asc': return a.price - b.price;
-        case 'price-desc': return b.price - a.price;
-        default: return 0;
-      }
-    });
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-
-  return (
-    <div className="sweet-list">
-      {filteredData.length === 0 ? (
-        <p>No sweets found matching your criteria.</p>
-      ) : (
-        <table className="sweet-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Price</th>
-              <th>Available</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredData.map((item) => (
-              <tr key={item.productId}>
-                <td>{item.productId}</td>
-                <td>{item.name}</td>
-                <td>{item.type}</td>
-                <td>₹{item.price}</td>
-                <td>{item.quantity}</td>
-                <td>
-                  <button 
-                    onClick={() => addToCart(item)}
-                    disabled={item.quantity <= 0}
-                  >
-                    {item.quantity <= 0 ? 'Out of Stock' : 'Add to Cart'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-}
-
-function CartBox({ cart, removeFromCart, decreaseQuantity }) {
   const total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+    
+    setIsCheckingOut(true);
+    setCheckoutMessage(null);
+
+    try {
+      const response = await fetch('http://localhost:3000/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cart })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Checkout failed');
+      }
+
+      const data = await response.json();
+      setCheckoutMessage({ type: 'success', text: 'Checkout successful!' });
+      setCart([]); // Clear the cart after successful checkout
+    } catch (error) {
+      setCheckoutMessage({ type: 'error', text: error.message });
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
 
   return (
     <div className="cart-box">
@@ -230,7 +290,18 @@ function CartBox({ cart, removeFromCart, decreaseQuantity }) {
           </ul>
           <div className="cart-total">
             <h4>Total: ₹{total}</h4>
-            <button className="checkout-btn">Proceed to Checkout</button>
+            <button 
+              className="checkout-btn" 
+              onClick={handleCheckout}
+              disabled={isCheckingOut || cart.length === 0}
+            >
+              {isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
+            </button>
+            {checkoutMessage && (
+              <div className={`checkout-message ${checkoutMessage.type}`}>
+                {checkoutMessage.text}
+              </div>
+            )}
           </div>
         </>
       )}

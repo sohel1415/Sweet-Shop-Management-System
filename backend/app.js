@@ -70,6 +70,8 @@ app.post('/api/sweets', async (req, res) => {
   }
 });
 
+
+
 // PUT update sweet by productId
 app.put('/api/sweets/:productId', async (req, res) => {
   try {
@@ -95,6 +97,41 @@ app.delete('/api/sweets/:productId', async (req, res) => {
     res.json({ message: 'Sweet deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Delete failed' });
+  }
+});
+
+// Add this new route to handle checkout
+app.post('/api/checkout', async (req, res) => {
+  try {
+    const { cart } = req.body;
+    
+    // Validate cart
+    if (!Array.isArray(cart)) {
+      return res.status(400).json({ error: 'Invalid cart data' });
+    }
+
+    // Process each item in cart
+    for (const item of cart) {
+      const sweet = await Sweet.findOne({ productId: item.productId });
+      
+      if (!sweet) {
+        return res.status(404).json({ error: `Sweet with ID ${item.productId} not found` });
+      }
+      
+      if (sweet.quantity < item.quantity) {
+        return res.status(400).json({ 
+          error: `Not enough stock for ${sweet.name}. Available: ${sweet.quantity}, Requested: ${item.quantity}`
+        });
+      }
+
+      // Update quantity in database
+      sweet.quantity -= item.quantity;
+      await sweet.save();
+    }
+
+    res.json({ message: 'Checkout successful', cart });
+  } catch (error) {
+    res.status(500).json({ error: 'Checkout failed', details: error.message });
   }
 });
 

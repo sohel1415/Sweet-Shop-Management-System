@@ -235,3 +235,25 @@
     flex-direction: column;
   }
 }
+
+.checkout-message {
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.checkout-message.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.checkout-message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.checkout-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
