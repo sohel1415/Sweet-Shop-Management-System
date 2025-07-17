@@ -10,8 +10,7 @@ function App() {
   const [sweets, setSweets] = useState([]);
 
   // Fetch sweets data when component mounts
-  useEffect(() => {
-    const fetchSweets = async () => {
+  const fetchSweets = async () => {
       try {
         const response = await fetch("http://localhost:3000/api/sweets");
         if (!response.ok) throw new Error('Failed to fetch sweets');
@@ -21,7 +20,12 @@ function App() {
         console.error('Error fetching sweets:', err);
       }
     };
+  useEffect(() => {
     fetchSweets();
+    const interval = setInterval(()=>{
+      fetchSweets();
+    },1000);
+    return () => clearInterval(interval);
   }, []);
 
   const addToCart = (item) => {
@@ -295,7 +299,7 @@ function CartBox({ cart, removeFromCart, decreaseQuantity, setCart }) {
               onClick={handleCheckout}
               disabled={isCheckingOut || cart.length === 0}
             >
-              {isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
+              {isCheckingOut ? 'Processing...' : 'Proceed to Buy'}
             </button>
             {checkoutMessage && (
               <div className={`checkout-message ${checkoutMessage.type}`}>
