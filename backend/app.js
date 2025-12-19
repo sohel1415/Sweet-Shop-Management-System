@@ -16,10 +16,8 @@ mongoose.connect('mongodb://127.0.0.1:27017/sweetshop', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-.then(() => console.log('✅ MongoDB connected'))
-.catch((err) => console.error('❌ MongoDB connection error:', err));
-
-// Routes
+.then(() => console.log('MongoDB connected'))
+.catch((err) => console.error('MongoDB connection error:', err));
 
 // GET all sweets
 app.get('/api/sweets', async (req, res) => {
@@ -100,7 +98,7 @@ app.delete('/api/sweets/:productId', async (req, res) => {
   }
 });
 
-// Add this new route to handle checkout
+// handle checkout
 app.post('/api/checkout', async (req, res) => {
   try {
     const { cart } = req.body;
